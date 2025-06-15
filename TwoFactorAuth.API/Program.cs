@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
+using Serilog.Sinks.PostgreSQL;
 using System;
 using System.Text;
 using TwoFactorAuth.API.Contextes;
@@ -69,6 +71,29 @@ builder.Services.AddScoped<AuthService>();
 
 builder.Services.AddMemoryCache();
 
+builder.Host.UseSerilog((context, services, configuration) =>
+{
+    configuration
+        .Enrich.FromLogContext()
+        .Enrich.WithProperty("Application", "TFA")
+        .WriteTo.Console()
+        .WriteTo.PostgreSQL(
+            connectionString: context.Configuration.GetConnectionString("PostgresConnection"),
+            tableName: "logs",
+            needAutoCreateTable: true,
+            columnOptions: new Dictionary<string, ColumnWriterBase>
+            {
+                ["message"] = new RenderedMessageColumnWriter(),
+                ["message_template"] = new MessageTemplateColumnWriter(),
+                ["level"] = new LevelColumnWriter(),
+                ["timestamp"] = new TimestampColumnWriter(),
+                ["exception"] = new ExceptionColumnWriter(),
+                ["log_event"] = new LogEventSerializedColumnWriter(),
+                ["trace_id"] = new SinglePropertyColumnWriter("traceId"),
+                ["user_name"] = new SinglePropertyColumnWriter("userName")
+            });
+});
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -91,5 +116,7 @@ app.MapControllers();
 
 app.MapHub<AuthHub>("/authHub");
 app.MapHub<QrLoginHub>("/qrlink").RequireCors("AllowAll");
+
+app.UseSerilogRequestLogging();
 
 app.Run();
