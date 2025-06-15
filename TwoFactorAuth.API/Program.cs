@@ -63,6 +63,7 @@ builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<IPasswordHasher<string>,PasswordHasher<string>>();
 builder.Services.AddScoped<MailService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<FaceRecognitionService>();
 builder.Services.AddScoped<QRCoderService>();
 builder.Services.AddScoped<AuthService>();
 
