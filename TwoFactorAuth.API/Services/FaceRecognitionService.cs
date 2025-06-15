@@ -29,7 +29,7 @@ namespace TwoFactorAuth.API.Services
 
             content.Add(fileContent, "file", "image.jpg");
 
-            // URL — адрес твоего API
+            // отправка запроса на fastAPI, где считывается вектор лица
             var response = await httpClient.PostAsync("http://localhost:8000/face-vector", content);
 
             response.EnsureSuccessStatusCode();
@@ -79,45 +79,6 @@ namespace TwoFactorAuth.API.Services
             return false;
         }
 
-
-
-        //public async Task<Guid> RegisterFaceAsync(Guid userId, byte[] faceImageBytes)
-        //{
-        //    var embedding = ExtractEmbedding(faceImageBytes);
-
-        //    var model = new FaceEmbedding
-        //    {
-        //        UserId = userId,
-        //        Embedding = embedding
-        //    };
-
-        //    _db.FaceEmbeddings.Add(model);
-        //    await _db.SaveChangesAsync();
-
-        //    return model.Id;
-        //}
-
-        //public async Task<Guid?> RecognizeFaceAsync(byte[] faceImageBytes, double similarityThreshold = 0.6)
-        //{
-        //    var queryEmbedding = ExtractEmbedding(faceImageBytes);
-
-        //    var knownEmbeddings = _db.FaceEmbeddings.ToList();
-
-        //    Guid? bestMatch = null;
-        //    double bestSimilarity = -1;
-
-        //    foreach (var known in knownEmbeddings)
-        //    {
-        //        var sim = CosineSimilarity(queryEmbedding, known.Embedding);
-        //        if (sim > bestSimilarity && sim >= similarityThreshold)
-        //        {
-        //            bestSimilarity = sim;
-        //            bestMatch = known.UserId;
-        //        }
-        //    }
-
-        //    return bestMatch;
-        //}
 
         public static double CosineSimilarity(float[] vectorA, float[] vectorB)
         {
