@@ -49,6 +49,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowAll", policy =>
     {
         policy.WithOrigins(
+            "http://localhost:3001",
                 "https://tfadiploma.ru",         
                 "null" //для андройд-приложения 
             )

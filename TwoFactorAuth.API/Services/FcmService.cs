@@ -1,48 +1,64 @@
 ﻿using Newtonsoft.Json;
+using System.Net.Http.Headers;
+using System.Net.Http;
 using System.Text;
 
 namespace TwoFactorAuth.API.Services
 {
     public class FcmService
     {
-        private readonly string _serverKey = "AIzaSyCdUmhWj_FXxpmLsz7JEfJ5zUPuPYcWSBw";
-        private readonly string _fcmUrl = "https://fcm.googleapis.com/fcm/send";
+       
+
+        private readonly IWebHostEnvironment _env;
+        private readonly HttpClient _httpClient;
+        private readonly string _projectId = "tfadiploma";
+
+        public FcmService(IWebHostEnvironment env)
+        {
+            _env = env;
+            _httpClient = new HttpClient();
+        }
 
         public async Task SendNotificationAsync(string deviceToken, string title, string body)
         {
-            using var httpClient = new HttpClient();
 
-            httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", $"key={_serverKey}");
-            httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json");
+            string filePath = Path.Combine(_env.WebRootPath, "fcmserviceaccount.json");
 
-            var message = new
+            var credential = Google.Apis.Auth.OAuth2.GoogleCredential
+            .FromFile(filePath)
+            .CreateScoped("https://www.googleapis.com/auth/firebase.messaging");
+
+            var accessToken = await credential.UnderlyingCredential.GetAccessTokenForRequestAsync();
+
+            var payload = new
             {
-                to = deviceToken,
-                notification = new
+                message = new
                 {
-                    title = title,
-                    body = body
-                },
-                // Можно также отправлять дополнительные данные
-                data = new
-                {
-                    customKey1 = "value1",
-                    customKey2 = "value2"
+                    token = deviceToken,
+                    notification = new
+                    {
+                        title,
+                        body
+                    }
                 }
             };
 
-            var jsonMessage = JsonConvert.SerializeObject(message);
-            var httpContent = new StringContent(jsonMessage, Encoding.UTF8, "application/json");
+            var json = JsonConvert.SerializeObject(payload);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await httpClient.PostAsync(_fcmUrl, httpContent);
-            var result = await response.Content.ReadAsStringAsync();
+            // Устанавливаем заголовки
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new Exception($"FCM Error: {response.StatusCode} - {result}");
-            }
+            // Отправляем запрос
+            var fcmUrl = $"https://fcm.googleapis.com/v1/projects/{_projectId}/messages:send";
+            var response = await _httpClient.PostAsync(fcmUrl, content);
 
-            Console.WriteLine("Push sent successfully: " + result);
+            // Читаем ответ
+            var responseBody = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"FCM status: {response.StatusCode}");
+            Console.WriteLine($"Response: {responseBody}");
+
+            response.EnsureSuccessStatusCode();
         }
     }
 }
