@@ -67,6 +67,7 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<FaceRecognitionService>();
 builder.Services.AddScoped<QRCoderService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<FcmService>();
 
 builder.Services.AddMemoryCache();
 

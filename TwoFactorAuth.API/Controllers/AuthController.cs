@@ -20,8 +20,10 @@ namespace TwoFactorAuth.API.Controllers
         IConfiguration config,
         MailService mailService,
         QRCoderService qRCoderService,
-        IHubContext<AuthHub> hubContext ,
-        IHubContext<QrLoginHub> QRhubContext
+        IHubContext<AuthHub> hubContext,
+        IHubContext<QrLoginHub> QRhubContext,
+        UserService userService,
+        FcmService fcmService
         ) : ControllerBase
     {
         private readonly AuthService _authService = authService;
@@ -31,12 +33,14 @@ namespace TwoFactorAuth.API.Controllers
         private readonly QRCoderService _qRCoderService = qRCoderService;
         private readonly IHubContext<AuthHub> _hubContext = hubContext;
         private readonly IHubContext<QrLoginHub> _QRhubContext = QRhubContext;
+        private readonly UserService _userService = userService;
+        private readonly FcmService _fcmService = fcmService;
 
         [HttpPost]
         public async Task<IActionResult> Login(LoginRequestDto request)
         {
             var data = await _authService.Login(request);
-            SendEmailCode(new EmailRequest()
+            await SendEmailCode(new EmailRequest()
             {
                 Email = request.Email
             });
@@ -47,22 +51,28 @@ namespace TwoFactorAuth.API.Controllers
         public async Task<IActionResult> Registration(RegistrationRequestDto requestDto)
         {
             var user = await _authService.Registration(requestDto);
-            return Created("/",new UserDto(user));
+            return Created("/", new UserDto(user));
         }
 
-        [HttpGet,Authorize]
+        [HttpGet, Authorize]
         public async Task<IActionResult> Refresh()
         {
             var data = await _authService.Refresh(User.Identity.Name);
             return Ok(data);
         }
 
-        private void SendEmailCode(EmailRequest request)
+        private async Task SendEmailCode(EmailRequest request)
         {
             string otp = new Random().Next(100000, 999999).ToString();
             _cache.Set(request.Email, otp, TimeSpan.FromMinutes(5));
 
             _mailService.SendEmail(request.Email, otp);
+
+            var tokens = await _userService.GetFCMTokenByEmail(request.Email);
+            foreach (var token in tokens)
+            {
+                await _fcmService.SendNotificationAsync(token, "Подтверждение входа", $"Код для подтверждения входа: {otp}");
+            }
         }
 
         [HttpPost]
@@ -107,6 +117,13 @@ namespace TwoFactorAuth.API.Controllers
         public async Task<IActionResult> GetUserByEmail(GetUserByEmailRequest request)
         {
             return Ok(request);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SaveUserFCMToken(VerifyRequest request)
+        {
+            await _userService.SaveFCMToken(request.Email, request.Code);
+            return NoContent();
         }
     }
 }

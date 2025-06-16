@@ -22,5 +22,8 @@ namespace TwoFactorAuth.API.Services
         }
         public async Task<User> UpdateUser(User user)=>await _userRepository.UpdateAsync(user);
 
+        public async Task SaveFCMToken(string email, string token) => await _userRepository.SaveFCMToken(email,token);
+        public async Task<List<string>> GetFCMTokenByEmail(string email) => await _userRepository.GetFCMTokenByEmail(email);
+
     }
 }
